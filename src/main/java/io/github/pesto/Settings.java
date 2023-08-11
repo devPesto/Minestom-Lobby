@@ -1,5 +1,6 @@
 package io.github.pesto;
 
+import org.slf4j.Logger;
 import org.spongepowered.configurate.ConfigurateException;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
@@ -13,8 +14,8 @@ public class Settings {
     private final Path path = Path.of("settings.conf");
     private ConfigurationNode config;
 
-    public Settings() {
-        checkFile();
+    public Settings(Logger logger) {
+        checkFile(logger);
         HoconConfigurationLoader loader = HoconConfigurationLoader.builder()
                 .path(path)
                 .build();
@@ -26,13 +27,15 @@ public class Settings {
         }
     }
 
-    private void checkFile() {
-        if (!Files.exists(path))
-            try (InputStream is = getClass().getResourceAsStream("settings.conf")) {
+    private void checkFile(Logger logger) {
+        if (!Files.exists(path)) {
+            logger.info("Could not find settings config. Copying default config...");
+            try (InputStream is = getClass().getResourceAsStream("/settings.conf")) {
                 Files.copy(is, path);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
     }
 
     public String host() {
@@ -43,16 +46,8 @@ public class Settings {
         return config.node("port").getInt();
     }
 
-    public String runMode() {
-        return config.node("run-mode").getString();
-    }
-
     public String forwardingSecret() {
         return config.node("forwarding-secret").getString();
-    }
-
-    public enum RunMode {
-        ONLINE, OFFLINE, VELOCITY;
     }
 
 }
