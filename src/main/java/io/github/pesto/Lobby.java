@@ -1,21 +1,40 @@
 package io.github.pesto;
 
+import io.github.pesto.event.Listen;
+import io.github.pesto.event.Listener;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.coordinate.Pos;
+import net.minestom.server.entity.Player;
+import net.minestom.server.event.player.PlayerLoginEvent;
 import net.minestom.server.extras.MojangAuth;
-import net.minestom.server.extras.bungee.BungeeCordProxy;
 import net.minestom.server.extras.velocity.VelocityProxy;
+import net.minestom.server.instance.AnvilLoader;
+import net.minestom.server.instance.Instance;
+import net.minestom.server.instance.InstanceContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.file.Path;
 
 public class Lobby {
+    private static final Logger logger = LoggerFactory.getLogger(Lobby.class);
 
     public static void main(String[] args) {
-        MinecraftServer server = MinecraftServer.init();
-        Settings settings = new Settings();
+        Settings settings = new Settings(logger);
 
-        switch (settings.runMode()) {
-            case "online":
-                MojangAuth.init();
-            case "velocity":
-                VelocityProxy.enable(settings.());
+        MinecraftServer server = MinecraftServer.init();
+        InstanceContainer instance = MinecraftServer.getInstanceManager().createInstanceContainer();
+        instance.setChunkLoader(new AnvilLoader(Path.of("myworld")));
+        instance.loadChunk(new Pos(2, 65, -3));
+
+        new GlobalListener(instance).register();
+
+        String secret = settings.forwardingSecret();
+        if (secret.isBlank()) {
+            logger.info("Velocity forwarding secret is not configured. Running in online mode");
+            MojangAuth.init();
+        } else {
+            VelocityProxy.enable(settings.forwardingSecret());
         }
 
         server.start(settings.host(), settings.port());
