@@ -1,9 +1,7 @@
 package io.github.pesto;
 
+import com.moandjiezana.toml.Toml;
 import org.slf4j.Logger;
-import org.spongepowered.configurate.ConfigurateException;
-import org.spongepowered.configurate.ConfigurationNode;
-import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,43 +9,38 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class Settings {
-    private final Path path = Path.of("settings.conf");
-    private ConfigurationNode config;
+    private final Path path = Path.of("settings.toml");
+    private final Toml config;
 
     public Settings(Logger logger) {
         checkFile(logger);
-        HoconConfigurationLoader loader = HoconConfigurationLoader.builder()
-                .path(path)
-                .build();
-
-        try {
-            config = loader.load();
-        } catch (ConfigurateException e) {
-            e.printStackTrace();
-        }
+        this.config = new Toml().read(path.toFile());
     }
 
     private void checkFile(Logger logger) {
         if (!Files.exists(path)) {
             logger.info("Could not find settings config. Copying default config...");
-            try (InputStream is = getClass().getResourceAsStream("/settings.conf")) {
+            try (InputStream is = getClass().getResourceAsStream("/settings.toml")) {
+                if (is == null)
+                    throw new IOException("Could not find default config");
+
                 Files.copy(is, path);
             } catch (IOException e) {
-                e.printStackTrace();
+				logger.error("IOException: {}", e.getMessage());
             }
         }
     }
 
     public String host() {
-        return config.node("host").getString();
+        return config.getString("host");
     }
 
     public int port() {
-        return config.node("port").getInt();
+        return config.getLong("port").intValue();
     }
 
     public String forwardingSecret() {
-        return config.node("forwarding-secret").getString();
+        return config.getString("forwarding-secret");
     }
 
 }
